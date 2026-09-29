@@ -1,0 +1,34 @@
+name: Android APK
+
+on:
+  push:
+    paths: ['android-app/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: android-app/package-lock.json
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Gradle assembleDebug
+        working-directory: android-app/android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk GoGEN-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GoGEN-apk
+          path: android-app/GoGEN-debug.apk
